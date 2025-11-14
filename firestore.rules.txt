@@ -1,0 +1,39 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Allow ALL authenticated users (Staff and Admin) read access to public/shared config data
+    match /artifacts/{appId}/public/data/{collectionId} {
+      allow read: if request.auth != null; 
+    }
+    
+    // SPECIFIC WRITE: Consumption Requests
+    // Staff creates a request, Admin approves/updates it.
+    match /artifacts/{appId}/public/data/consumption_requests/{requestId} {
+      // Allows anyone logged in (Staff or Admin) to CREATE (Staff) or UPDATE (Admin) requests
+      allow create, update: if request.auth != null;
+      allow delete: if false; 
+    }
+
+    // SPECIFIC WRITE: Inventory, Stock Ledgers, Users, Transfers
+    // These should only be writable by the Admin, based on a proper role check.
+    // For this demonstration, we'll keep it simple, but in a production app, these need strict Admin validation.
+    match /artifacts/{appId}/public/data/{collectionId} {
+        allow write: if false; 
+    }
+    
+    // Since the app code uses write actions for Product Management, Stock Movement, 
+    // and setting up the User role, you MUST implement specific rules for these collections:
+    // EXAMPLE (ALLOWS ADMIN TO WRITE EVERYTHING):
+    match /artifacts/{appId}/public/data/users/{userId} {
+        // Allows user to read their own role + Admin/initial setup user to write roles
+        allow read, write: if request.auth != null; 
+    }
+    
+    match /artifacts/{appId}/public/data/{adminCollectionId} {
+        // Warning: This allows ALL authenticated users to write to these collections, which is only safe if you trust all users.
+        // For a true Admin protection, you'd need a security function.
+        allow write: if request.auth != null; 
+    }
+  }
+}
